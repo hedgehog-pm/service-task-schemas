@@ -1,0 +1,4 @@
+interface:
+  display_name: "Go: контекст"
+  short_description: "Отмена, дедлайны и передача контекста между вызовами"
+  default_prompt: "Примени $golang-context к текущей задаче Go."

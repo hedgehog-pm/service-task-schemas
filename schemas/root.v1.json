@@ -1,0 +1,15 @@
+{
+  "slug": "root",
+  "version": 1,
+  "schema": {
+    "type": "object",
+    "properties": {
+      "title": {
+        "type": "string"
+      },
+      "description": {
+        "type": "string"
+      }
+    }
+  }
+}

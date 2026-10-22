@@ -1,0 +1,235 @@
+# Версия схемы конфигурации, отдельная от версии golangci-lint.
+version: "2"
+
+formatters:
+  enable:
+    # Единое оформление отступов, пробелов и пустых строк.
+    - gofumpt
+    # Добавляет недостающие импорты и удаляет неиспользуемые.
+    - goimports
+    # Отделяет импорты своего модуля от внешних зависимостей.
+    - gci
+    - golines
+
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        # Путь берётся из go.mod и автоматически обновляется после gonew.
+        - localmodule
+      # Сначала стандартная библиотека, затем внешние пакеты и свой модуль.
+      custom-order: true
+    golines:
+      max-len: 80
+
+linters:
+  # Используем только явно выбранные проверки.
+  default: none
+  enable:
+    # Находит вызовы, ошибки которых остались без обработки.
+    - errcheck
+    # Проверяет подозрительные конструкции стандартными анализаторами Go.
+    - govet
+    # Находит присваивания, значения которых не используются.
+    - ineffassign
+    # Находит ошибки и подозрительные конструкции, которые пропускает компилятор.
+    - staticcheck
+    # Находит неиспользуемые объявления.
+    - unused
+    # Проверяет выбранные ниже соглашения об именовании и структуре кода.
+    - revive
+    # Пустые строки между логическими блоками
+    - wsl_v5
+
+    # Проверяет сравнение, определение типа и оборачивание ошибок.
+    - errorlint
+    # Проверяет имена вроде ErrNotFound и ValidationError.
+    - errname
+    # Находит возврат nil-ошибки после проверки другой ненулевой ошибки.
+    - nilnesserr
+    # Находит поддерживаемые операции, вызванные через API без Context.
+    - noctx
+    # Находит потерю родительского контекста при передаче вызовов дальше.
+    - contextcheck
+    # Находит незакрытое тело HTTP-ответа.
+    - bodyclose
+    # Требует обработать известные варианты перечисления в switch.
+    - exhaustive
+    # Проверяет точность, обоснование и необходимость подавлений nolint.
+    - nolintlint
+
+    # Запрещает выбранные сторонние библиотеки и устаревшие импорты.
+    - depguard
+    # Запрещает перечисленные ниже функции с подсказкой о замене.
+    - forbidigo
+    # Предлагает стандартную библиотеку вместо доступных аналогов из x/exp.
+    - exptostd
+    # Проверяет контекст, сообщения и имена полей структурированных логов.
+    - sloglint
+
+    # Находит умножение двух time.Duration, обычно означающее ошибку единиц.
+    - durationcheck
+    # Предлагает net.JoinHostPort вместо fmt.Sprintf для поддержки IPv6.
+    - nosprintfhostport
+    # Находит незакрытые результаты SQL-запросов и подготовленные выражения.
+    - sqlclosecheck
+    # Проверяет обработку rows.Err(), чтобы не потерять ошибку чтения.
+    - rowserrcheck
+    # Ограничивает число методов интерфейса.
+    - interfacebloat
+    # Проверяет вызовы testify, если эта библиотека используется в тестах.
+    - testifylint
+    # Предлагает современные конструкции Go и API стандартной библиотеки.
+    - modernize
+    # Замена fmt.Sprintf и похожих вызовов более простыми операциями.
+    - perfsprint
+    # Выбор подходящих функций для string и []byte без лишних преобразований.
+    - mirror
+
+  settings:
+    revive:
+      # Список правил остаётся явным при обновлении линтера.
+      enable-all-rules: false
+      enable-default-rules: false
+      rules:
+        # Проверяет mixedCaps и регистр стандартных сокращений вроде ID и HTTP.
+        - name: var-naming
+          arguments:
+            # Исключений из стандартного написания сокращений нет.
+            - []
+            # Дополняем встроенный набор сокращений.
+            - [DB, GRPC, JWT]
+
+        # Запрещает this и self, проверяет согласованность receiver в одном файле.
+        - name: receiver-naming
+
+        # Проверяет имена пакетов, включая общие имена и совпадения со stdlib.
+        - name: package-naming
+          arguments:
+            # Разрешаем имя pkg, сохраняя остальные проверки имён пакетов.
+            - skip-top-level-check: true
+              # Запрещаем common, util, utils и другие имена из встроенного списка.
+              skip-default-bad-name-check: false
+              # Запрещаем совпадения с популярными пакетами stdlib вроде http и json.
+              skip-collision-with-common-std: false
+
+        # Предлагает ранний выход, чтобы основной код не оставался внутри if.
+        - name: early-return
+          arguments:
+            # Сохраняем область видимости локальных переменных.
+            - preserve-scope
+            # Разрешаем предложить return, continue или break для уменьшения вложенности.
+            - allow-jump
+
+        # Убирает ненужный else после ветки, завершающейся return.
+        - name: indent-error-flow
+          arguments: [preserve-scope]
+
+        # Убирает ненужный else после break, continue, panic и других выходов.
+        - name: superfluous-else
+          arguments: [preserve-scope]
+
+        # Предлагает условие напрямую вместо if с присвоением или возвратом true и false.
+        - name: unnecessary-if
+
+        # Ограничивает число независимых путей выполнения функции.
+        - name: cyclomatic
+          arguments: [15]
+          # Табличные тесты и сценарии проверок могут требовать больших функций.
+          exclude: [TEST]
+
+        # Ограничивает сложность с учётом вложенности управляющих конструкций.
+        - name: cognitive-complexity
+          arguments: [20]
+          exclude: [TEST]
+
+        # Ограничивает функцию сорока операторами, чтобы она не разрасталась.
+        - name: function-length
+          # Ноль отключает ограничение строк и не мешает комментариям и оформлению.
+          arguments: [40, 0]
+          exclude: [TEST]
+
+    errorlint:
+      # В fmt.Errorf сохраняем переданную ошибку через %w.
+      errorf: true
+      # Проверка типа ошибки должна учитывать обёртки.
+      asserts: true
+      # Сравнение ошибок должно учитывать обёртки.
+      comparison: true
+
+    exhaustive:
+      check: [switch]
+      # default не заменяет явную обработку каждого известного варианта enum.
+      default-signifies-exhaustive: false
+
+    nolintlint:
+      # Находим подавления, которые больше ничего не подавляют.
+      allow-unused: false
+      # В директиве нужно указать конкретный линтер.
+      require-specific: true
+      # После директивы нужна непустая причина исключения.
+      require-explanation: true
+
+    sloglint:
+      # Разрешаем глобальные вызовы slog.InfoContext и аналогичных функций.
+      no-global: ""
+      # Если контекст доступен в функции, передаём его в вызов логгера.
+      context: scope
+      # Значения передаём полями, сохраняя постоянный текст сообщения.
+      static-msg: true
+      # Имена полей пишем как user_id и request_id.
+      key-naming-case: snake
+      # Допускаем пары ключ-значение и slog.Attr в одном вызове.
+      no-mixed-args: false
+
+    depguard:
+      rules:
+        standard-library:
+          # Применяем запреты без отдельного списка разрешённых импортов.
+          list-mode: original
+          files: ["$all"]
+          deny:
+            # Знак $ ограничивает запрет пакетом log и оставляет log/slog доступным.
+            - pkg: "log$"
+              desc: Используй log/slog для логирования.
+            - pkg: github.com/sirupsen/logrus
+              desc: Используй log/slog для логирования.
+            - pkg: go.uber.org/zap
+              desc: Используй log/slog для логирования.
+            - pkg: github.com/rs/zerolog
+              desc: Используй log/slog для логирования.
+            - pkg: golang.org/x/exp/slog
+              desc: Используй log/slog из стандартной библиотеки.
+
+            - pkg: github.com/pkg/errors
+              desc: Создавай и оборачивай ошибки через errors и fmt.
+            - pkg: github.com/go-errors/errors
+              desc: Создавай и оборачивай ошибки через errors и fmt.
+            - pkg: github.com/cockroachdb/errors
+              desc: Создавай и оборачивай ошибки через errors и fmt.
+            - pkg: go.uber.org/multierr
+              desc: Объединяй ошибки через errors.Join.
+            - pkg: github.com/hashicorp/go-multierror
+              desc: Объединяй ошибки через errors.Join.
+
+            - pkg: "io/ioutil$"
+              desc: Используй io и os вместо устаревшего io/ioutil.
+            - pkg: "golang.org/x/net/context$"
+              desc: Используй context из стандартной библиотеки.
+
+    forbidigo:
+      # Определяем пакет по типам, чтобы переименование импорта не обходило запрет.
+      analyze-types: true
+      forbid:
+        # errors.Is учитывает цепочку обёрнутых ошибок.
+        - pattern: '^os\.IsNotExist$'
+          pkg: '^os$'
+          msg: Используй errors.Is(err, fs.ErrNotExist).
+        - pattern: '^os\.IsPermission$'
+          pkg: '^os$'
+          msg: Используй errors.Is(err, fs.ErrPermission).
+
+    interfacebloat:
+      # Не больше пяти методов в одном интерфейсе.
+      max: 5

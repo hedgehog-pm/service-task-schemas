@@ -1,0 +1,4 @@
+interface:
+  display_name: "Go: корректность"
+  short_description: "Ошибки nil, срезов, преобразований и ресурсов"
+  default_prompt: "Примени $golang-safety к текущей задаче Go."

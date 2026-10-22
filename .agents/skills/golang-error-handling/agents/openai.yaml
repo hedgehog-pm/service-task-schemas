@@ -1,0 +1,4 @@
+interface:
+  display_name: "Go: ошибки"
+  short_description: "Контракты ошибок, обёртки и однократное логирование"
+  default_prompt: "Примени $golang-error-handling к текущей задаче Go."

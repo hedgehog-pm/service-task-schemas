@@ -1,0 +1,162 @@
+openapi: 3.0.3
+
+info:
+  title: Task schema API
+  version: 1.0.0
+
+paths:
+  /schemas:
+    get:
+      operationId: findSchemas
+      summary: Поиск схем, объявляющих все указанные поля
+      parameters:
+        - name: fields
+          in: query
+          required: true
+          style: form
+          explode: false
+          description: Непустой список имён полей верхнего уровня.
+          schema:
+            type: array
+            minItems: 1
+            items:
+              type: string
+              minLength: 1
+      responses:
+        "200":
+          description: Найденные контракты
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchemaMatches"
+        "400":
+          description: Отсутствующий, пустой или содержащий пустое имя список fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /schemas/{slug}:
+    get:
+      operationId: listSchemaVersions
+      summary: Список версий схемы
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        "200":
+          description: Версии схемы
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchemaVersions"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /schemas/{slug}/versions/{version}:
+    get:
+      operationId: getSchema
+      summary: Схема по slug и version
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - name: version
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: JSON Schema
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+components:
+  schemas:
+    SchemaMatches:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SchemaMatch"
+
+    SchemaMatch:
+      type: object
+      required:
+        - slug
+        - version
+        - schema
+      properties:
+        slug:
+          type: string
+        version:
+          type: integer
+          minimum: 1
+        schema:
+          type: object
+          additionalProperties: true
+          x-go-type: json.RawMessage
+
+    SchemaVersions:
+      type: object
+      required:
+        - versions
+      properties:
+        versions:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Неверный идентификатор
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Схема не найдена
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    InternalError:
+      description: Внутренняя ошибка
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"

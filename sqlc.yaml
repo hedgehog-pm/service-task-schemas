@@ -1,0 +1,11 @@
+version: "2"
+sql:
+  - engine: postgresql
+    schema: migrations/postgresql/master
+    queries: internal/repository/schema/queries.sql
+    gen:
+      go:
+        package: schema
+        out: internal/generated/sqlc/schema
+        sql_package: pgx/v5
+        emit_pointers_for_null_types: true

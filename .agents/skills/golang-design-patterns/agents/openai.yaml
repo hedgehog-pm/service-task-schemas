@@ -1,0 +1,4 @@
+interface:
+  display_name: "Go: проектирование"
+  short_description: "Выбор API, интерфейсов и жизненного цикла компонентов"
+  default_prompt: "Примени $golang-design-patterns к текущей задаче Go."

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:schemas:definition",
+  "$dynamicAnchor": "meta",
+  "$ref": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "$schema": {
+      "const": "https://json-schema.org/draft/2020-12/schema"
+    },
+    "additionalProperties": {
+      "not": {"const": false}
+    }
+  }
+}

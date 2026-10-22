@@ -1,0 +1,4 @@
+interface:
+  display_name: "Go: конкурентность"
+  short_description: "Владение данными и завершение конкурентной работы"
+  default_prompt: "Примени $golang-concurrency к текущей задаче Go."

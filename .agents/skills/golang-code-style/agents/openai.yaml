@@ -1,0 +1,4 @@
+interface:
+  display_name: "Go: понятный код"
+  short_description: "Читаемость Go без лишнего дробления и оформления"
+  default_prompt: "Примени $golang-code-style к текущей задаче Go."
