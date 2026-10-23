@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -120,8 +121,22 @@ func compose(
 		return nil, fmt.Errorf("%w: %w", ErrInvalidInput, err)
 	}
 
+	// TODO: в данный момент поле x-extensions может содержать какие угодно поля.
+	// На значение этих полей планируется завязывать бизнес-логику, если она будет
+	// опираться конкретный тип из x-extensions, а в одной из схем допустят опечатку,
+	// то логика может сломаться. Если потребуется, то надо подумать как это решить.
+	// Потенциально, можно завести их в виде схемы, и запретить менять типы при оверрайде.
+	source, extensions, err := splitExtensions(model.OwnSchema)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"%w: extract extensions: %w",
+			ErrInvalidInput,
+			err,
+		)
+	}
+
 	var own jsonschema.Schema
-	if err := json.Unmarshal(model.OwnSchema, &own); err != nil {
+	if err := json.Unmarshal(source, &own); err != nil {
 		return nil, fmt.Errorf(
 			"%w: decode definition: %w",
 			ErrInvalidInput,
@@ -134,7 +149,9 @@ func compose(
 		own.ID = "urn:schemas:part:" + url.PathEscape(model.ID.String())
 	}
 
-	var inherited jsonschema.Schema
+	var inherited struct {
+		AllOf []*jsonschema.Schema `json:"allOf"`
+	}
 
 	if model.RequiresParent() {
 		// Родитель уже собран и прошёл проверки, поэтому ошибки ниже
@@ -180,6 +197,10 @@ func compose(
 		UnevaluatedProperties: &jsonschema.Schema{Not: &jsonschema.Schema{}},
 	}
 
+	if extensions != nil {
+		effective.Extra = map[string]any{"x-extensions": extensions}
+	}
+
 	document, err := json.Marshal(effective)
 	if err != nil {
 		return nil, fmt.Errorf("encode effective schema: %w", err)
@@ -195,4 +216,31 @@ func compose(
 	}
 
 	return document, nil
+}
+
+func splitExtensions(
+	document json.RawMessage,
+) (json.RawMessage, json.RawMessage, error) {
+	if !bytes.HasPrefix(bytes.TrimSpace(document), []byte("{")) {
+		return document, nil, nil
+	}
+
+	var keywords map[string]json.RawMessage
+	if err := json.Unmarshal(document, &keywords); err != nil {
+		return nil, nil, err
+	}
+
+	extensions := keywords["x-extensions"]
+	if extensions == nil {
+		return document, nil, nil
+	}
+
+	delete(keywords, "x-extensions")
+
+	source, err := json.Marshal(keywords)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return source, extensions, nil
 }

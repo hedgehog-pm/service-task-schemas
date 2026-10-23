@@ -2,11 +2,13 @@
 package domain
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"reflect"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/google/jsonschema-go/jsonschema"
 )
 
 var validate = validator.New(validator.WithRequiredStructEnabled())
@@ -51,14 +53,20 @@ func (s Schema) SameDefinition(other Schema) bool {
 		return false
 	}
 
-	var a, b any
-	if json.Unmarshal(s.OwnSchema, &a) != nil {
-		return false
+	var definitions [2]any
+
+	for i, source := range []json.RawMessage{s.OwnSchema, other.OwnSchema} {
+		if !json.Valid(source) {
+			return false
+		}
+
+		decoder := json.NewDecoder(bytes.NewReader(source))
+		decoder.UseNumber()
+
+		if decoder.Decode(&definitions[i]) != nil {
+			return false
+		}
 	}
 
-	if json.Unmarshal(other.OwnSchema, &b) != nil {
-		return false
-	}
-
-	return reflect.DeepEqual(a, b)
+	return jsonschema.Equal(definitions[0], definitions[1])
 }
