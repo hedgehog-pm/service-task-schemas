@@ -12,10 +12,11 @@ import (
 
 type Usecase struct {
 	repository repository
+	compiler   compiler
 }
 
-func New(repository repository) *Usecase {
-	return &Usecase{repository: repository}
+func New(repository repository, compiler compiler) *Usecase {
+	return &Usecase{repository: repository, compiler: compiler}
 }
 
 // Do собирает итоговые схемы и сохраняет их в хранилище, не изменяя входные схемы.
@@ -91,7 +92,10 @@ func (u *Usecase) publish(ctx context.Context, models []domain.Schema) error {
 	}
 
 	// found содержит и уже сохранённые версии батча, и родителей.
-	ordered, err := domain.ComposeSchemas(slices.Concat(prepared, found))
+	ordered, err := domain.ComposeSchemas(
+		slices.Concat(prepared, found),
+		u.compiler,
+	)
 	if err != nil {
 		return err
 	}

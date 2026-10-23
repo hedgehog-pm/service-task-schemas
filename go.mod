@@ -11,12 +11,12 @@ tool (
 require (
 	github.com/go-playground/validator/v10 v10.30.5
 	github.com/google/jsonschema-go v0.4.3
+	github.com/hedgehog-pm/schema v0.1.0
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/labstack/echo/v5 v5.4.0
 	github.com/oapi-codegen/runtime v1.7.0
 	github.com/pressly/goose/v3 v3.29.0
 	github.com/samber/lo v1.53.0
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 )
 
 require (
@@ -211,6 +211,7 @@ require (
 	github.com/ryancurrah/gomodguard/v2 v2.1.3 // indirect
 	github.com/ryanrolds/sqlclosecheck v0.6.0 // indirect
 	github.com/sanposhiho/wastedassign/v2 v2.1.0 // indirect
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3 // indirect
 	github.com/sashamelentyev/interfacebloat v1.1.0 // indirect
 	github.com/sashamelentyev/usestdlibvars v1.29.0 // indirect
 	github.com/securego/gosec/v2 v2.29.0 // indirect

@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 
+	schemalib "github.com/hedgehog-pm/schema"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
@@ -65,7 +66,12 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("load seed files: %w", err)
 	}
 
-	publisher := publishschemas.New(schema.NewPostgres(pool))
+	compiler, err := schemalib.New(256)
+	if err != nil {
+		return fmt.Errorf("create schema compiler: %w", err)
+	}
+
+	publisher := publishschemas.New(schema.NewPostgres(pool), compiler)
 
 	if err := publisher.Do(ctx, models); err != nil {
 		return fmt.Errorf("insert seed schemas: %w", err)

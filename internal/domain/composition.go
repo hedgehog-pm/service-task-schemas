@@ -7,11 +7,15 @@ import (
 	"net/url"
 
 	"github.com/google/jsonschema-go/jsonschema"
+	"github.com/hedgehog-pm/schema"
 	"github.com/samber/lo"
-	definitionvalidator "github.com/santhosh-tekuri/jsonschema/v6"
 
 	"github.com/hedgehog-pm/service-task-schemas/internal/pkg/topsort"
 )
+
+type compiler interface {
+	Compile(json.RawMessage) (*schema.Schema, error)
+}
 
 // ComposeSchemas собирает дерево схем, наследуя родительские поля.
 // Cборка происходит по принципу:
@@ -23,7 +27,7 @@ import (
 //
 // Ошибки, вызванные входными данными, оборачивают ErrInvalidInput.
 // Остальные ошибки означают сбой или нарушенный инвариант.
-func ComposeSchemas(models []Schema) ([]Schema, error) {
+func ComposeSchemas(models []Schema, compiler compiler) ([]Schema, error) {
 	var problems []error
 
 	for _, model := range models {
@@ -60,7 +64,7 @@ func ComposeSchemas(models []Schema) ([]Schema, error) {
 		)
 	}
 
-	definition, err := compileDefinition()
+	definition, err := compiler.Compile(definitionSchema)
 	if err != nil {
 		return nil, fmt.Errorf("compile definition meta-schema: %w", err)
 	}
@@ -79,7 +83,12 @@ func ComposeSchemas(models []Schema) ([]Schema, error) {
 			continue
 		}
 
-		model.EffectiveSchema, err = compose(model, parent, definition)
+		model.EffectiveSchema, err = compose(
+			model,
+			parent,
+			definition,
+			compiler,
+		)
 		if err != nil {
 			problems = append(
 				problems,
@@ -104,18 +113,10 @@ func ComposeSchemas(models []Schema) ([]Schema, error) {
 
 func compose(
 	model, parent Schema,
-	definition *definitionvalidator.Schema,
+	definition *schema.Schema,
+	compiler compiler,
 ) (json.RawMessage, error) {
-	var document any
-	if err := json.Unmarshal(model.OwnSchema, &document); err != nil {
-		return nil, fmt.Errorf(
-			"%w: decode definition: %w",
-			ErrInvalidInput,
-			err,
-		)
-	}
-
-	if err := definition.Validate(document); err != nil {
+	if err := definition.Validate(model.OwnSchema); err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrInvalidInput, err)
 	}
 
@@ -179,14 +180,19 @@ func compose(
 		UnevaluatedProperties: &jsonschema.Schema{Not: &jsonschema.Schema{}},
 	}
 
-	// Resolve без загрузчика отвергает внешние ссылки, а контракт должен быть автономным.
-	if _, err := effective.Resolve(nil); err != nil {
+	document, err := json.Marshal(effective)
+	if err != nil {
+		return nil, fmt.Errorf("encode effective schema: %w", err)
+	}
+
+	// Проверяем собранный контракт целиком, включая ссылки между его частями.
+	if _, err := compiler.Compile(document); err != nil {
 		return nil, fmt.Errorf(
-			"%w: resolve effective schema: %w",
+			"%w: compile effective schema: %w",
 			ErrInvalidInput,
 			err,
 		)
 	}
 
-	return json.Marshal(effective)
+	return document, nil
 }
