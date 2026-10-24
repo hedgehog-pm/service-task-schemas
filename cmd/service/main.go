@@ -20,6 +20,7 @@ import (
 	"github.com/hedgehog-pm/service-task-schemas/internal/repository/schema"
 	"github.com/hedgehog-pm/service-task-schemas/internal/usecase/findschemas"
 	"github.com/hedgehog-pm/service-task-schemas/internal/usecase/getschema"
+	"github.com/hedgehog-pm/service-task-schemas/internal/usecase/listschemaancestors"
 	"github.com/hedgehog-pm/service-task-schemas/internal/usecase/listschemaversions"
 )
 
@@ -54,6 +55,7 @@ func run(ctx context.Context) error {
 		getschema.New(repository),
 		listschemaversions.New(repository),
 		findschemas.New(repository),
+		listschemaancestors.New(repository),
 	)
 
 	server := &http.Server{

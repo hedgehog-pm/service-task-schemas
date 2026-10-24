@@ -106,6 +106,52 @@ func (q *Queries) GetEffectiveSchema(ctx context.Context, arg GetEffectiveSchema
 	return effective_schema, err
 }
 
+const getSchemaLineage = `-- name: GetSchemaLineage :many
+WITH RECURSIVE lineage AS (
+    SELECT s.slug, s.version, s.parent_slug, s.parent_version, 0 AS depth
+    FROM schemas AS s
+    WHERE s.slug = $1 AND s.version = $2::bigint
+
+    UNION ALL
+
+    SELECT parent.slug, parent.version, parent.parent_slug, parent.parent_version, lineage.depth + 1
+    FROM schemas AS parent
+    JOIN lineage ON parent.slug = lineage.parent_slug AND parent.version = lineage.parent_version
+)
+SELECT lineage.slug, lineage.version FROM lineage
+ORDER BY lineage.depth
+`
+
+type GetSchemaLineageParams struct {
+	Slug    string
+	Version int64
+}
+
+type GetSchemaLineageRow struct {
+	Slug    string
+	Version int32
+}
+
+func (q *Queries) GetSchemaLineage(ctx context.Context, arg GetSchemaLineageParams) ([]GetSchemaLineageRow, error) {
+	rows, err := q.db.Query(ctx, getSchemaLineage, arg.Slug, arg.Version)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetSchemaLineageRow
+	for rows.Next() {
+		var i GetSchemaLineageRow
+		if err := rows.Scan(&i.Slug, &i.Version); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertSchema = `-- name: InsertSchema :execrows
 INSERT INTO schemas (slug, version, parent_slug, parent_version, own_schema, effective_schema)
 VALUES ($1, $2, $3, $4, $5, $6)

@@ -8,25 +8,50 @@ import (
 	generatedapi "github.com/hedgehog-pm/service-task-schemas/internal/generated/api"
 	"github.com/hedgehog-pm/service-task-schemas/internal/usecase/findschemas"
 	"github.com/hedgehog-pm/service-task-schemas/internal/usecase/getschema"
+	"github.com/hedgehog-pm/service-task-schemas/internal/usecase/listschemaancestors"
 	"github.com/hedgehog-pm/service-task-schemas/internal/usecase/listschemaversions"
 )
 
 type Server struct {
-	getSchema    *getschema.Usecase
-	listVersions *listschemaversions.Usecase
-	findSchemas  *findschemas.Usecase
+	getSchema     *getschema.Usecase
+	listVersions  *listschemaversions.Usecase
+	findSchemas   *findschemas.Usecase
+	listAncestors *listschemaancestors.Usecase
 }
 
 func NewServer(
 	getSchema *getschema.Usecase,
 	listVersions *listschemaversions.Usecase,
 	findSchemas *findschemas.Usecase,
+	listAncestors *listschemaancestors.Usecase,
 ) *Server {
 	return &Server{
-		getSchema:    getSchema,
-		listVersions: listVersions,
-		findSchemas:  findSchemas,
+		getSchema:     getSchema,
+		listVersions:  listVersions,
+		findSchemas:   findSchemas,
+		listAncestors: listAncestors,
 	}
+}
+
+func (h *Server) ListSchemaAncestors(
+	ctx *echo.Context,
+	slug string,
+	version int,
+) error {
+	ancestors, err := h.listAncestors.Do(ctx.Request().Context(), slug, version)
+	if err != nil {
+		return err
+	}
+
+	items := make([]generatedapi.SchemaID, len(ancestors))
+	for i, ancestor := range ancestors {
+		items[i] = generatedapi.SchemaID{
+			Slug:    ancestor.Slug,
+			Version: ancestor.Version,
+		}
+	}
+
+	return ctx.JSON(http.StatusOK, generatedapi.SchemaAncestors{Items: items})
 }
 
 func (h *Server) FindSchemas(

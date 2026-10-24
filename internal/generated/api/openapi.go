@@ -17,6 +17,17 @@ type Error struct {
 	Message string `json:"message"`
 }
 
+// SchemaAncestors defines model for SchemaAncestors.
+type SchemaAncestors struct {
+	Items []SchemaID `json:"items"`
+}
+
+// SchemaID defines model for SchemaID.
+type SchemaID struct {
+	Slug    string `json:"slug"`
+	Version int    `json:"version"`
+}
+
 // SchemaMatch defines model for SchemaMatch.
 type SchemaMatch struct {
 	Schema  json.RawMessage `json:"schema"`
@@ -60,6 +71,9 @@ type ServerInterface interface {
 	// GetSchema Схема по slug и version
 	// (GET /schemas/{slug}/versions/{version})
 	GetSchema(ctx *echo.Context, slug string, version int) error
+	// ListSchemaAncestors Схема и её предки до корня
+	// (GET /schemas/{slug}/versions/{version}/ancestors)
+	ListSchemaAncestors(ctx *echo.Context, slug string, version int) error
 }
 
 // ServerInterfaceWrapper converts echo contexts to parameters.
@@ -125,6 +139,30 @@ func (w *ServerInterfaceWrapper) GetSchema(ctx *echo.Context) error {
 	return err
 }
 
+// ListSchemaAncestors converts echo context to params.
+func (w *ServerInterfaceWrapper) ListSchemaAncestors(ctx *echo.Context) error {
+	var err error
+	// ------------- Path parameter "slug" -------------
+	var slug string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "slug", ctx.Param("slug"), &slug, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: ctx.Request().URL.RawPath == ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter slug: %s", err))
+	}
+
+	// ------------- Path parameter "version" -------------
+	var version int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "version", ctx.Param("version"), &version, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: "", ValueIsUnescaped: ctx.Request().URL.RawPath == ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter version: %s", err))
+	}
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.ListSchemaAncestors(ctx, slug, version)
+	return err
+}
+
 // This is a simple interface which specifies echo.Route addition functions which
 // are present on both echo.Echo and echo.Group, since we want to allow using
 // either of them for path registration
@@ -167,6 +205,7 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 // RegisterHandlersWithOptions registers handlers using the supplied options,
 // including any per-operation middleware.
 func RegisterHandlersWithOptions(router EchoRouter, si ServerInterface, options RegisterHandlersOptions) {
+
 	wrapper := ServerInterfaceWrapper{
 		Handler: si,
 	}
@@ -174,4 +213,6 @@ func RegisterHandlersWithOptions(router EchoRouter, si ServerInterface, options 
 	router.GET(options.BaseURL+"/schemas", wrapper.FindSchemas, options.OperationMiddlewares["findSchemas"]...)
 	router.GET(options.BaseURL+"/schemas/:slug", wrapper.ListSchemaVersions, options.OperationMiddlewares["listSchemaVersions"]...)
 	router.GET(options.BaseURL+"/schemas/:slug/versions/:version", wrapper.GetSchema, options.OperationMiddlewares["getSchema"]...)
+	router.GET(options.BaseURL+"/schemas/:slug/versions/:version/ancestors", wrapper.ListSchemaAncestors, options.OperationMiddlewares["listSchemaAncestors"]...)
+
 }

@@ -47,6 +47,29 @@ func (r *Postgres) Get(
 	return document, nil
 }
 
+func (r *Postgres) Ancestors(
+	ctx context.Context,
+	id domain.ID,
+) ([]domain.ID, error) {
+	rows, err := r.queries.GetSchemaLineage(ctx, sqlcgen.GetSchemaLineageParams{
+		Slug: id.Slug, Version: int64(id.Version),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("read schema ancestors %s: %w", id, err)
+	}
+
+	if len(rows) == 0 {
+		return nil, fmt.Errorf("%w: %s", domain.ErrNotFound, id)
+	}
+
+	ancestors := make([]domain.ID, len(rows))
+	for i, row := range rows {
+		ancestors[i] = domain.ID{Slug: row.Slug, Version: int(row.Version)}
+	}
+
+	return ancestors, nil
+}
+
 func (r *Postgres) Versions(ctx context.Context, slug string) ([]int, error) {
 	stored, err := r.queries.ListSchemaVersions(ctx, slug)
 	if err != nil {
